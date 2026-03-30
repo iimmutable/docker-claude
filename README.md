@@ -162,14 +162,13 @@ Global         ~/.claude/settings.json                           (mounted from c
 
 ### Global Settings
 
-Edit `config/claude-settings.json` on your host to change global defaults. This file is mounted read-only into the container at `~/.claude/settings.json`. Changes take effect on next container restart.
+Edit `config/claude-settings.json` on your host to change global defaults. This file is mounted read-only into the container and symlinked to `~/.claude/settings.json` at startup. Changes take effect on next container restart.
 
-The default config includes:
+The default config sets:
 
-- **Permissions** — common dev tools pre-allowed (git, npm, cargo, go, dotnet, docker, etc.)
-- **Safety denials** — blocks destructive commands (`rm -rf /`, `chmod 777`, fork bombs)
-- **Environment** — editor and telemetry settings
-- **Preferences** — thinking mode auto-enabled, concise output style
+- **Model** — defaults to Opus
+- **Environment** — model mappings for Haiku/Sonnet/Opus, API timeout, telemetry disabled
+- **Attribution** — header disabled
 
 ### Per-Project Settings
 
@@ -206,6 +205,33 @@ cat > .claude/settings.local.json << 'EOF'
 }
 EOF
 ```
+
+### Local Plugin Marketplace
+
+You can mount a local Claude Code plugin marketplace from your host into the container.
+
+**1. Set the path in `.env`:**
+
+```
+CLAUDE_MARKETPLACE_PATH=/Users/yourname/path/to/your/marketplace
+```
+
+**2. Restart:**
+
+```bash
+make down && make up
+```
+
+**3. Register inside the container:**
+
+```bash
+make shell
+claude plugin marketplace add /etc/claude-code/marketplace
+```
+
+The marketplace is mounted read-only at `/etc/claude-code/marketplace`. File changes on your host are reflected immediately inside the container — no restart needed for updated plugins, though you may need to re-register the marketplace in Claude Code when adding new ones.
+
+If `CLAUDE_MARKETPLACE_PATH` is not set in `.env`, it falls back to the empty `./marketplace/` folder (no error).
 
 ## Port Mappings
 
@@ -549,6 +575,7 @@ docker-claude/
 ├── docker-compose.gpu.yml            # GPU override (NVIDIA device passthrough)
 ├── docker-compose.windows.yml        # Windows-specific overrides
 ├── docker-compose.yml                # Main compose (services, volumes, ports)
+├── marketplace/                      # Default (empty) plugin marketplace fallback
 └── scripts/
     ├── entrypoint.sh                 # Container startup (runtime init, auth check)
     ├── setup.ps1                     # One-command setup (Windows)

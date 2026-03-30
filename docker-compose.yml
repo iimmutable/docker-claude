@@ -69,6 +69,8 @@ services:
       # To enable DinD, use: docker compose -f docker-compose.yml -f docker-compose.dind.yml up -d
       # Claude Code user settings (global defaults — symlinked by entrypoint)
       - ./config/claude-settings.json:/etc/claude-code/settings.json:ro
+      # Claude Code local marketplace (host folder, read-only)
+      - ${CLAUDE_MARKETPLACE_PATH:-./marketplace}:/etc/claude-code/marketplace:ro
       # SSH agent forwarding (Mac/Linux)
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
       # Git config (read-only from host)

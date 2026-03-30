@@ -98,6 +98,15 @@ else
     echo -e "${YELLOW}!${NC} Claude Code: No global settings (using defaults)"
 fi
 
+# -- Claude Code Marketplace --
+if [ -d "/etc/claude-code/marketplace" ] && [ "$(ls -A /etc/claude-code/marketplace 2>/dev/null | grep -v .gitkeep)" ]; then
+    PLUGIN_COUNT=$(find /etc/claude-code/marketplace -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+    echo -e "${GREEN}✓${NC} Claude Code: Local marketplace mounted (${PLUGIN_COUNT} plugin(s))"
+    echo -e "    Register with: ${BLUE}claude plugin marketplace add /etc/claude-code/marketplace${NC}"
+else
+    echo -e "${YELLOW}!${NC} Claude Code: No local marketplace mounted"
+fi
+
 # -- Workspace --
 echo ""
 if [ "$(ls -A /workspace 2>/dev/null)" ]; then
