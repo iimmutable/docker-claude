@@ -1,0 +1,29 @@
+# =============================================================================
+# Docker Compose Debug Override — Debugger Support
+#
+# Adds SYS_PTRACE capability and unconfined seccomp profile for debugging
+# tools like delve (Go), lldb, gdb, strace, etc.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
+#   Or via Makefile: make DEBUG=true up
+# =============================================================================
+
+services:
+  docker-claude:
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
+  docker-claude-solana:
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
+  docker-claude-mobile:
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined

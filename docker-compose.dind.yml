@@ -1,0 +1,34 @@
+# =============================================================================
+# Docker Compose DinD Override — Docker-in-Docker
+#
+# ⚠️  SECURITY WARNING: Mounting the Docker socket gives the container full
+# control over your host Docker daemon. Only enable this if you trust all
+# code running inside the container.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dind.yml up -d
+#   Or via Makefile: make DIND=true up
+# =============================================================================
+
+services:
+  docker-claude:
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+      - ${HOME:-~}/.gitconfig:/home/dev/.gitconfig:ro
+
+  docker-claude-solana:
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+
+  docker-claude-mobile:
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent

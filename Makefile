@@ -5,7 +5,7 @@
 
 .PHONY: help build build-slim build-all up down restart shell claude login \
         solana-up mobile-up status logs clean nuke health \
-        backup restore backup-list backup-clean
+        backup restore backup-list backup-clean backup-enc restore-enc
 
 # Detect OS for compose file selection
 ifeq ($(OS),Windows_NT)
@@ -14,10 +14,24 @@ else
     COMPOSE_FILES := -f docker-compose.yml
 endif
 
-# GPU override (use: make build GPU=true)
+# GPU override (use: make GPU=true build)
 GPU ?= false
 ifeq ($(GPU),true)
     COMPOSE_FILES += -f docker-compose.gpu.yml
+endif
+
+# DinD override (use: make DIND=true up)
+# ⚠️  Mounts Docker socket — gives container full host Docker access
+DIND ?= false
+ifeq ($(DIND),true)
+    COMPOSE_FILES += -f docker-compose.dind.yml
+endif
+
+# Debug override (use: make DEBUG=true up)
+# Adds SYS_PTRACE + unconfined seccomp for debuggers
+DEBUG ?= false
+ifeq ($(DEBUG),true)
+    COMPOSE_FILES += -f docker-compose.debug.yml
 endif
 
 COMPOSE := docker compose $(COMPOSE_FILES)
@@ -38,9 +52,13 @@ help: ## Show this help
 	@echo "  make build              Build core image (all stacks)"
 	@echo "  make build-slim         Build with Node + Go only"
 	@echo "  make up                 Start core environment"
+	@echo "  make DIND=true up       Start with Docker-in-Docker enabled"
+	@echo "  make DEBUG=true up      Start with debugger support (SYS_PTRACE)"
 	@echo "  make solana-up          Start with Solana profile"
 	@echo "  make claude             Launch Claude Code CLI"
 	@echo "  make GPU=true build     Build with NVIDIA GPU support"
+	@echo "  make backup             Backup project volume"
+	@echo "  make backup-enc         Encrypted backup (openssl)"
 	@echo ""
 
 # =============================================================================
@@ -238,16 +256,65 @@ restore: ## Restore project volume from a backup (usage: make restore FILE=backu
 
 backup-list: ## List all available backups
 	@echo "=== Backups in $(BACKUP_DIR)/ ==="
-	@ls -lh $(BACKUP_DIR)/docker-claude-backup_*.tar.gz 2>/dev/null \
+	@ls -lh $(BACKUP_DIR)/docker-claude-backup_*.tar.gz $(BACKUP_DIR)/docker-claude-backup_*.tar.gz.enc 2>/dev/null \
 		| awk '{printf "  %s  %s  %s\n", $$9, $$5, $$6" "$$7" "$$8}' \
 		|| echo "  No backups found."
 	@echo ""
-	@echo "Total: $$(ls $(BACKUP_DIR)/docker-claude-backup_*.tar.gz 2>/dev/null | wc -l | tr -d ' ') backup(s)"
+	@TOTAL=$$(ls $(BACKUP_DIR)/docker-claude-backup_*.tar.gz $(BACKUP_DIR)/docker-claude-backup_*.tar.gz.enc 2>/dev/null | wc -l | tr -d ' ') && \
+	echo "Total: $${TOTAL} backup(s)"
 	@du -sh $(BACKUP_DIR) 2>/dev/null | awk '{printf "  Disk usage: %s\n", $$1}' || true
 
 backup-clean: ## Delete backups older than 30 days
 	@echo "Removing backups older than 30 days from $(BACKUP_DIR)/ ..."
-	@find $(BACKUP_DIR) -name "docker-claude-backup_*.tar.gz" -mtime +30 -print -delete 2>/dev/null \
+	@find $(BACKUP_DIR) -name "docker-claude-backup_*" -mtime +30 -print -delete 2>/dev/null \
 		|| echo "  No old backups found."
 	@echo "Done."
+
+# =============================================================================
+# Encrypted Backup & Restore (openssl)
+# =============================================================================
+
+backup-enc: ## Encrypted backup (openssl AES-256, prompts for passphrase)
+	@mkdir -p $(BACKUP_DIR)
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S) && \
+	BACKUP_FILE="$(BACKUP_DIR)/docker-claude-backup_$${TIMESTAMP}.tar.gz.enc" && \
+	echo "Creating encrypted backup → $${BACKUP_FILE} ..." && \
+	echo "You will be prompted for an encryption passphrase." && \
+	docker run --rm \
+		-v claude-projects:/workspace:ro \
+		ubuntu:24.04 \
+		tar czf - -C /workspace . \
+	| openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 -out "$${BACKUP_FILE}" && \
+	SIZE=$$(du -h "$${BACKUP_FILE}" | cut -f1) && \
+	echo "✓ Encrypted backup complete: $${BACKUP_FILE} ($${SIZE})" && \
+	echo "  ⚠️  Store your passphrase safely — it cannot be recovered."
+
+restore-enc: ## Restore from encrypted backup (usage: make restore-enc FILE=backups/xxx.tar.gz.enc)
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make restore-enc FILE=backups/docker-claude-backup_YYYYMMDD_HHMMSS.tar.gz.enc"; \
+		echo ""; \
+		echo "Available encrypted backups:"; \
+		ls -lh $(BACKUP_DIR)/docker-claude-backup_*.tar.gz.enc 2>/dev/null || echo "  No encrypted backups found in $(BACKUP_DIR)/"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(FILE)" ]; then \
+		echo "✗ File not found: $(FILE)"; \
+		exit 1; \
+	fi
+	@echo "⚠️  This will REPLACE all contents of the project volume with the backup."
+	@echo "   Backup file: $(FILE)"
+	@read -p "   Type 'yes' to confirm: " confirm && \
+	if [ "$$confirm" = "yes" ]; then \
+		echo "Stopping containers..." && \
+		$(COMPOSE) --profile solana --profile mobile down && \
+		echo "Decrypting and restoring from $(FILE) ..." && \
+		openssl enc -aes-256-cbc -d -pbkdf2 -iter 100000 -in "$(FILE)" \
+		| docker run --rm -i \
+			-v claude-projects:/workspace \
+			ubuntu:24.04 \
+			sh -c "rm -rf /workspace/* /workspace/.[!.]* 2>/dev/null; tar xzf - -C /workspace" && \
+		echo "✓ Restore complete. Run 'make up' to start." ; \
+	else \
+		echo "Cancelled."; \
+	fi
 

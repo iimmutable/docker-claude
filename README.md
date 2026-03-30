@@ -98,9 +98,16 @@ make nuke               # ⚠️ Remove EVERYTHING including volumes
 
 # Backup & Restore
 make backup             # Backup project volume to timestamped tar.gz
-make backup-list        # List all available backups
-make restore FILE=...   # Restore from a specific backup
+make backup-enc         # Encrypted backup (AES-256, prompts for passphrase)
+make backup-list        # List all backups (plain + encrypted)
+make restore FILE=...   # Restore from a plain backup
+make restore-enc FILE=... # Restore from an encrypted backup
 make backup-clean       # Delete backups older than 30 days
+
+# Security Overrides
+make DIND=true up       # Enable Docker-in-Docker (mounts Docker socket)
+make DEBUG=true up      # Enable debugger support (SYS_PTRACE + unconfined seccomp)
+make DIND=true DEBUG=true up  # Both
 ```
 
 ## Setup Options
@@ -140,6 +147,65 @@ make login
 ```
 
 OAuth tokens are persisted in the `claude-auth` volume — you only need to login once.
+
+## Claude Code Configuration
+
+Claude Code uses a hierarchical settings system. Docker Claude mounts a global `settings.json` into the container and supports per-project overrides.
+
+### Settings Hierarchy (highest priority wins)
+
+```
+Per-project    /workspace/my-project/.claude/settings.json      (team, checked into git)
+Per-project    /workspace/my-project/.claude/settings.local.json (personal, git-ignored)
+Global         ~/.claude/settings.json                           (mounted from config/)
+```
+
+### Global Settings
+
+Edit `config/claude-settings.json` on your host to change global defaults. This file is mounted read-only into the container at `~/.claude/settings.json`. Changes take effect on next container restart.
+
+The default config includes:
+
+- **Permissions** — common dev tools pre-allowed (git, npm, cargo, go, dotnet, docker, etc.)
+- **Safety denials** — blocks destructive commands (`rm -rf /`, `chmod 777`, fork bombs)
+- **Environment** — editor and telemetry settings
+- **Preferences** — thinking mode auto-enabled, concise output style
+
+### Per-Project Settings
+
+Inside the container, create project-level settings that override globals:
+
+```bash
+make shell
+cd /workspace/my-project
+mkdir -p .claude
+cat > .claude/settings.json << 'EOF'
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
+EOF
+```
+
+An example project settings file is at `config/claude-project-settings.example.json`.
+
+### Personal Project Settings (git-ignored)
+
+For personal tweaks within a project that shouldn't be shared with your team:
+
+```bash
+cat > .claude/settings.local.json << 'EOF'
+{
+  "preferences": {
+    "thinking": "always"
+  }
+}
+EOF
+```
 
 ## Port Mappings
 
@@ -362,6 +428,61 @@ crontab -e
 
 > **Note:** Backups work even when containers are stopped — they spin up a temporary container to read the volume. The `backups/` directory is git-ignored by default.
 
+### Encrypted Backups
+
+For sensitive projects, use AES-256-CBC encrypted backups via openssl:
+
+```bash
+# Create encrypted backup (prompts for passphrase)
+make backup-enc
+
+# Restore from encrypted backup (prompts for passphrase)
+make restore-enc FILE=backups/docker-claude-backup_20260330_143000.tar.gz.enc
+```
+
+No GPG setup needed — just remember your passphrase. Losing it means the backup is unrecoverable.
+
+### Automated Daily Encrypted Backups (cron)
+
+```bash
+crontab -e
+
+# Uses BACKUP_PASS env var to avoid interactive prompt
+0 2 * * * cd /path/to/docker-claude && BACKUP_PASS="your-passphrase" make backup-enc 2>&1 >> backups/cron.log
+```
+
+## Security
+
+This environment is security-hardened by default. See [SECURITY.md](SECURITY.md) for full details.
+
+### Defaults
+
+- **Docker socket NOT mounted** — prevents host compromise
+- **Ports bound to 127.0.0.1** — not visible on your local network
+- **Default seccomp profile** — dangerous syscalls blocked
+- **No extra capabilities** — SYS_PTRACE disabled
+- **No piped script execution** — all install scripts downloaded to disk first
+- **All downloads over HTTPS** — from official sources only
+- **Encrypted backups available** — AES-256-CBC via openssl
+
+### Security Overrides
+
+When you need features that reduce security:
+
+```bash
+make DIND=true up                 # Docker-in-Docker (mounts host Docker socket)
+make DEBUG=true up                # Debugger support (SYS_PTRACE + unconfined seccomp)
+make DIND=true DEBUG=true up      # Both
+```
+
+### Accepted Risks
+
+These are known and accepted for development convenience:
+
+- **API keys in env vars** — visible in `docker inspect`; `.env` is git-ignored
+- **SSH agent forwarding** — container can use (but not extract) your SSH keys
+- **Git config mounted** — read-only; exposes name/email
+
 ## Troubleshooting
 
 ### Port conflict on startup (e.g., "port 5000 already in use")
@@ -417,9 +538,14 @@ docker-claude/
 ├── Dockerfile.solana                 # Solana profile (Solana CLI/Anchor)
 ├── Makefile                          # All commands (run: make help)
 ├── README.md                         # This file
+├── SECURITY.md                       # Security documentation
 ├── config/
 │   ├── .bashrc                       # Shell config (prompt, aliases, PATH)
-│   └── .gitattributes                # LF enforcement for cross-platform
+│   ├── .gitattributes                # LF enforcement for cross-platform
+│   ├── claude-settings.json          # Claude Code global settings (mounted into container)
+│   └── claude-project-settings.example.json  # Example per-project settings
+├── docker-compose.debug.yml          # Debug override (SYS_PTRACE + seccomp)
+├── docker-compose.dind.yml           # DinD override (Docker socket mount)
 ├── docker-compose.gpu.yml            # GPU override (NVIDIA device passthrough)
 ├── docker-compose.windows.yml        # Windows-specific overrides
 ├── docker-compose.yml                # Main compose (services, volumes, ports)

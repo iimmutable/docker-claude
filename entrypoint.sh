@@ -75,7 +75,8 @@ fi
 if [ -S "/var/run/docker.sock" ]; then
     echo -e "${GREEN}✓${NC} Docker socket available ($(docker --version 2>/dev/null | awk '{print $3}' | tr -d ','))"
 else
-    echo -e "${YELLOW}!${NC} Docker socket not mounted — DinD unavailable"
+    echo -e "${YELLOW}!${NC} Docker socket not mounted (default for security)"
+    echo -e "    To enable DinD: ${BLUE}make DIND=true up${NC}"
 fi
 
 # -- Claude Code Auth --
@@ -86,6 +87,13 @@ elif [ -f "/home/dev/.claude/credentials.json" ] || [ -f "/home/dev/.claude/.cre
 else
     echo -e "${YELLOW}!${NC} Claude Code: No auth configured"
     echo -e "    Set ANTHROPIC_API_KEY or run: ${BLUE}claude login${NC}"
+fi
+
+# -- Claude Code Settings --
+if [ -f "/home/dev/.claude/settings.json" ]; then
+    echo -e "${GREEN}✓${NC} Claude Code: Global settings loaded"
+else
+    echo -e "${YELLOW}!${NC} Claude Code: No global settings (using defaults)"
 fi
 
 # -- Workspace --
