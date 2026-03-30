@@ -1,0 +1,189 @@
+# =============================================================================
+# Docker Compose — Claude Code Development Environment
+#
+# Usage:
+#   Core only:       docker compose up -d
+#   With Solana:     docker compose --profile solana up -d
+#   With Mobile:     docker compose --profile mobile up -d
+#   Everything:      docker compose --profile solana --profile mobile up -d
+#   Slim build:      docker compose build --build-arg INCLUDE_DOTNET=false
+#   GPU build:       docker compose build --build-arg INCLUDE_GPU=true
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Core Development Environment (always available)
+  # ===========================================================================
+  docker-claude:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INCLUDE_NODE: "true"
+        INCLUDE_DOTNET: "true"
+        INCLUDE_GOLANG: "true"
+        INCLUDE_RUST: "true"
+        INCLUDE_GPU: "false"
+        DEV_UID: "1000"
+        DEV_GID: "1000"
+    image: docker-claude:latest
+    container_name: docker-claude
+    hostname: docker-claude
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+    # -- Environment --
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - TERM=xterm-256color
+      - COLORTERM=truecolor
+      # NVM
+      - NVM_DIR=/usr/local/nvm
+      # Go
+      - GOPATH=/home/dev/go
+      - GOROOT=/usr/local/go
+      # .NET
+      - DOTNET_ROOT=/usr/local/dotnet
+      - DOTNET_CLI_TELEMETRY_OPTOUT=1
+      # Rust
+      - RUSTUP_HOME=/usr/local/rustup
+      - CARGO_HOME=/usr/local/cargo
+
+    # -- Volumes --
+    volumes:
+      # Project code + dependencies (named volume, fully virtualized)
+      - vol-projects:/workspace
+      # Claude auth persistence
+      - vol-claude-auth:/home/dev/.claude
+      # Docker socket for DinD
+      - /var/run/docker.sock:/var/run/docker.sock
+      # SSH agent forwarding (Mac/Linux)
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+      # Git config (read-only from host)
+      - ${HOME:-~}/.gitconfig:/home/dev/.gitconfig:ro
+
+    # -- SSH agent --
+    env_file:
+      - .env
+
+    # -- Ports --
+    ports:
+      - "41300:3000"     # React / Express
+      - "41500:5000"     # ASP.NET HTTP
+      - "41501:5001"     # ASP.NET HTTPS
+      - "41517:5173"     # Vite
+      - "41808:8080"     # Go / Generic
+      - "41881:8081"     # Vue / Metro
+
+    # -- Resource limits --
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: "4"
+        reservations:
+          memory: 2G
+          cpus: "1"
+
+    # -- Security --
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_PTRACE  # For debuggers
+
+  # ===========================================================================
+  # Solana Development (optional profile)
+  # ===========================================================================
+  docker-claude-solana:
+    build:
+      context: .
+      dockerfile: Dockerfile.solana
+      args:
+        BASE_IMAGE: docker-claude:latest
+    image: docker-claude-solana:latest
+    container_name: docker-claude-solana
+    hostname: docker-claude-solana
+    profiles:
+      - solana
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - TERM=xterm-256color
+      - NVM_DIR=/usr/local/nvm
+
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+
+    ports:
+      - "41889:8899"     # Solana local validator RPC
+      - "41890:8900"     # Solana local validator WebSocket
+
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: "4"
+
+  # ===========================================================================
+  # Mobile Development (optional profile)
+  # ===========================================================================
+  docker-claude-mobile:
+    build:
+      context: .
+      dockerfile: Dockerfile.mobile
+      args:
+        BASE_IMAGE: docker-claude:latest
+    image: docker-claude-mobile:latest
+    container_name: docker-claude-mobile
+    hostname: docker-claude-mobile
+    profiles:
+      - mobile
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - TERM=xterm-256color
+      - NVM_DIR=/usr/local/nvm
+      - ANDROID_HOME=/opt/android-sdk
+      - ANDROID_SDK_ROOT=/opt/android-sdk
+      - FLUTTER_HOME=/opt/flutter
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
+
+    ports:
+      - "41900:19000"   # Expo
+      - "41901:19001"   # Expo DevTools
+      - "41554:5554"     # Android emulator
+      - "41555:5555"     # Android ADB
+
+    deploy:
+      resources:
+        limits:
+          memory: 12G
+          cpus: "4"
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  vol-projects:
+    name: claude-projects
+    driver: local
+
+  vol-claude-auth:
+    name: claude-auth
+    driver: local

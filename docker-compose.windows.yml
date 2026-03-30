@@ -1,0 +1,40 @@
+# =============================================================================
+# Docker Compose Overrides for Windows
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.windows.yml up -d
+#
+# This overrides Mac/Linux-specific volume mounts (Docker socket, SSH agent)
+# with their Windows equivalents.
+# =============================================================================
+
+services:
+  docker-claude:
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      # Windows: Docker Desktop exposes the socket via named pipe
+      - //var/run/docker.sock:/var/run/docker.sock
+      # Windows: SSH keys mounted directly (no agent forwarding)
+      # Uses the Windows user's .ssh directory via WSL path translation
+      - ${USERPROFILE:-.}/.ssh:/home/dev/.ssh:ro
+      - ${USERPROFILE:-.}/.gitconfig:/home/dev/.gitconfig:ro
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - TERM=xterm-256color
+      - NVM_DIR=/usr/local/nvm
+      # No SSH_AUTH_SOCK on Windows — keys are mounted directly
+      - SSH_AUTH_SOCK=
+
+  docker-claude-solana:
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - //var/run/docker.sock:/var/run/docker.sock
+      - ${USERPROFILE:-.}/.ssh:/home/dev/.ssh:ro
+
+  docker-claude-mobile:
+    volumes:
+      - vol-projects:/workspace
+      - vol-claude-auth:/home/dev/.claude
+      - //var/run/docker.sock:/var/run/docker.sock
+      - ${USERPROFILE:-.}/.ssh:/home/dev/.ssh:ro

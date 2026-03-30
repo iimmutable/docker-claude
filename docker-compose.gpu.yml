@@ -1,0 +1,54 @@
+# =============================================================================
+# Docker Compose GPU Override
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+#   Or via Makefile: make GPU=true up
+#
+# Prerequisites:
+#   - NVIDIA GPU drivers installed on host
+#   - NVIDIA Container Toolkit installed
+#   - Docker configured with nvidia runtime
+#
+# Does NOT work on macOS (no NVIDIA GPU support)
+# =============================================================================
+
+services:
+  docker-claude:
+    build:
+      args:
+        INCLUDE_GPU: "true"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+  docker-claude-solana:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+  docker-claude-mobile:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility

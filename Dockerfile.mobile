@@ -1,0 +1,72 @@
+# =============================================================================
+# Dockerfile.mobile — Android SDK + Flutter + React Native
+# Extends the main claude-dev image
+#
+# NOTE: iOS builds require macOS + Xcode and cannot run in Docker.
+#       This image supports Android builds and code editing/linting only.
+# =============================================================================
+
+ARG BASE_IMAGE=docker-claude
+FROM ${BASE_IMAGE}
+
+USER root
+
+# -- Java (required for Android SDK) --
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk-headless \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# -- Android SDK Command-Line Tools --
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=${ANDROID_HOME}
+ARG ANDROID_CMD_VERSION=11076708
+
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
+    && curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMD_VERSION}_latest.zip" \
+       -o /tmp/cmdline-tools.zip \
+    && unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools \
+    && mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest \
+    && rm /tmp/cmdline-tools.zip
+
+ENV PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
+
+# Accept licenses and install SDK components
+RUN yes | sdkmanager --licenses > /dev/null 2>&1 \
+    && sdkmanager --update \
+    && sdkmanager \
+       "platform-tools" \
+       "platforms;android-34" \
+       "build-tools;34.0.0" \
+       "emulator" \
+       "system-images;android-34;google_apis;x86_64" \
+    || echo "Some SDK components may require manual installation"
+
+# -- Flutter SDK --
+ARG FLUTTER_VERSION=3.24.5
+ENV FLUTTER_HOME=/opt/flutter
+RUN git clone --depth 1 --branch ${FLUTTER_VERSION} \
+    https://github.com/flutter/flutter.git ${FLUTTER_HOME} \
+    && ${FLUTTER_HOME}/bin/flutter precache --android \
+    && ${FLUTTER_HOME}/bin/flutter config --no-analytics \
+    && ${FLUTTER_HOME}/bin/dart --disable-analytics
+
+ENV PATH="${FLUTTER_HOME}/bin:${FLUTTER_HOME}/bin/cache/dart-sdk/bin:${PATH}"
+
+# -- React Native CLI --
+RUN . /usr/local/nvm/nvm.sh && \
+    npm install -g react-native-cli @react-native-community/cli expo-cli || true
+
+# -- Permissions --
+RUN chown -R dev:dev ${ANDROID_HOME} ${FLUTTER_HOME}
+
+# Expose Metro bundler + Android emulator ports
+EXPOSE 8081 5554 5555
+
+USER dev
+WORKDIR /workspace
+
+# Verify installations
+RUN flutter doctor --android-licenses 2>/dev/null || true \
+    && flutter doctor || true

@@ -1,0 +1,36 @@
+# =============================================================================
+# Dockerfile.solana — Solana + Anchor development tools
+# Extends the main claude-dev image
+# =============================================================================
+
+ARG BASE_IMAGE=docker-claude
+FROM ${BASE_IMAGE}
+
+USER root
+
+# Solana CLI
+ARG SOLANA_VERSION=1.18.26
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/v${SOLANA_VERSION}/install)" \
+    && echo 'export PATH="/home/dev/.local/share/solana/install/active_release/bin:$PATH"' \
+       >> /home/dev/.bashrc
+
+# Anchor framework
+RUN . /usr/local/nvm/nvm.sh && \
+    npm install -g @coral-xyz/anchor-cli || true
+
+# Rust BPF target for Solana programs
+RUN /usr/local/cargo/bin/rustup target add bpfv2-unknown-none \
+    || /usr/local/cargo/bin/rustup target add bpfel-unknown-unknown \
+    || true
+
+# Solana dev tools
+RUN . /usr/local/nvm/nvm.sh && \
+    npm install -g @solana/web3.js @solana/spl-token || true
+
+ENV PATH="/home/dev/.local/share/solana/install/active_release/bin:${PATH}"
+
+# Expose Solana local validator port
+EXPOSE 8899 8900
+
+USER dev
+WORKDIR /workspace

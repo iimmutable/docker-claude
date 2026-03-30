@@ -1,0 +1,146 @@
+{
+  "name": "Claude Code Dev Environment",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "docker-claude",
+  "workspaceFolder": "/workspace",
+
+  // Run as the dev user
+  "remoteUser": "dev",
+
+  // Features to install inside the container
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": false,
+      "username": "dev"
+    }
+  },
+
+  // VS Code settings inside the container
+  "customizations": {
+    "vscode": {
+      "settings": {
+        // Terminal
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.cwd": "/workspace",
+
+        // Editor
+        "editor.formatOnSave": true,
+        "editor.bracketPairColorization.enabled": true,
+        "editor.guides.bracketPairs": true,
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+
+        // TypeScript / JavaScript
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "javascript.preferences.importModuleSpecifier": "relative",
+
+        // .NET
+        "dotnet.server.useOmnisharp": false,
+        "omnisharp.enableRoslynAnalyzers": true,
+
+        // Go
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+
+        // Rust
+        "rust-analyzer.check.command": "clippy",
+
+        // Docker
+        "docker.environment": {
+          "DOCKER_HOST": "unix:///var/run/docker.sock"
+        }
+      },
+
+      // Extensions to install
+      "extensions": [
+        // ---- Core ----
+        "ms-azuretools.vscode-docker",
+        "github.copilot",
+        "eamodio.gitlens",
+        "usernamehw.errorlens",
+        "gruntfuggly.todo-tree",
+        "streetsidesoftware.code-spell-checker",
+
+        // ---- JavaScript / TypeScript ----
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+
+        // ---- React ----
+        "dsznajder.es7-react-js-snippets",
+
+        // ---- Vue ----
+        "Vue.volar",
+
+        // ---- .NET / C# ----
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+
+        // ---- Go ----
+        "golang.go",
+
+        // ---- Rust ----
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+
+        // ---- Solana / Blockchain ----
+        "nicholasgcoles.solidity",
+        "JuanBlanco.solidity",
+
+        // ---- Flutter / Dart ----
+        "Dart-Code.dart-code",
+        "Dart-Code.flutter",
+
+        // ---- Mobile ----
+        "nickmillerdev.react-native-tools-preview",
+
+        // ---- Data / Config ----
+        "redhat.vscode-yaml",
+        "ms-python.python"
+      ]
+    }
+  },
+
+  // Ports to auto-forward
+  "forwardPorts": [
+    41300,  // React / Express
+    41500,  // ASP.NET HTTP
+    41501,  // ASP.NET HTTPS
+    41517,  // Vite
+    41808,  // Go / Generic
+    41881,  // Vue / Metro
+    41889,  // Solana validator
+    41900,  // Expo
+    41901   // Expo DevTools
+  ],
+
+  "portsAttributes": {
+    "41300": { "label": "React / Express (→3000)", "onAutoForward": "notify" },
+    "41500": { "label": "ASP.NET HTTP (→5000)", "onAutoForward": "notify" },
+    "41501": { "label": "ASP.NET HTTPS (→5001)", "onAutoForward": "notify" },
+    "41517": { "label": "Vite Dev Server (→5173)", "onAutoForward": "notify" },
+    "41808": { "label": "Go / Generic (→8080)", "onAutoForward": "notify" },
+    "41881": { "label": "Vue / Metro (→8081)", "onAutoForward": "notify" },
+    "41889": { "label": "Solana Validator (→8899)", "onAutoForward": "ignore" },
+    "41900": { "label": "Expo (→19000)", "onAutoForward": "ignore" },
+    "41901": { "label": "Expo DevTools (→19001)", "onAutoForward": "ignore" }
+  },
+
+  // Environment variables
+  "remoteEnv": {
+    "NVM_DIR": "/usr/local/nvm",
+    "GOPATH": "/home/dev/go",
+    "GOROOT": "/usr/local/go",
+    "DOTNET_ROOT": "/usr/local/dotnet",
+    "RUSTUP_HOME": "/usr/local/rustup",
+    "CARGO_HOME": "/usr/local/cargo",
+    "SSH_AUTH_SOCK": "/ssh-agent"
+  },
+
+  // Run after container starts
+  "postStartCommand": "echo '🚀 Claude Code Dev Environment ready!' && . /usr/local/nvm/nvm.sh 2>/dev/null || true",
+
+  // Lifecycle
+  "shutdownAction": "stopCompose"
+}

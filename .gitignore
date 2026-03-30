@@ -1,0 +1,18 @@
+# Environment secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker build cache
+.docker/

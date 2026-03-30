@@ -1,0 +1,22 @@
+# Enforce LF line endings inside the container
+# This prevents CRLF issues when sharing volumes between Mac/Windows/Linux
+
+* text=auto eol=lf
+
+# Binary files — do not modify
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.jar binary
+*.dll binary
+*.so binary
+*.dylib binary
