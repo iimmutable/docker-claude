@@ -30,6 +30,13 @@ A fully virtualized, cross-platform development environment running Claude Code 
 
 ## Getting Started
 
+### Step 0 — Get docker-claude
+
+```bash
+git clone https://github.com/iimmutable/docker-claude.git
+cd docker-claude
+```
+
 ### Step 1 — Install Docker Desktop
 
 | Platform | Download | Notes |
@@ -47,7 +54,6 @@ docker compose version    # Should show a version number
 ### Step 2 — Configure
 
 ```bash
-cd docker-claude
 cp .env.example .env
 ```
 
