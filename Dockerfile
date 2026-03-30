@@ -152,10 +152,11 @@ RUN if [ "${INCLUDE_RUST}" = "true" ]; then \
 # =============================================================================
 # Claude Code CLI
 # =============================================================================
+ARG CLAUDE_CODE_VERSION=2.1.77
 RUN if [ -s "$NVM_DIR/nvm.sh" ]; then \
       . $NVM_DIR/nvm.sh \
-      && npm install -g @anthropic-ai/claude-code \
-      && echo ">>> Claude Code CLI installed"; \
+      && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
+      && echo ">>> Claude Code CLI v${CLAUDE_CODE_VERSION} installed"; \
     else \
       echo ">>> Claude Code CLI requires Node.js — skipped"; \
     fi
