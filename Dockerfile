@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential pkg-config cmake \
     unzip zip tar gzip bzip2 xz-utils \
     zsh bash-completion jq ripgrep fd-find fzf tree htop \
+    vim nano \
     net-tools iputils-ping dnsutils \
     locales \
     python3 python3-pip python3-venv \

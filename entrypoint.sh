@@ -90,7 +90,9 @@ else
 fi
 
 # -- Claude Code Settings --
-if [ -f "/home/dev/.claude/settings.json" ]; then
+if [ -f "/etc/claude-code/settings.json" ]; then
+    # Symlink mounted settings into Claude Code's expected location
+    ln -sf /etc/claude-code/settings.json /home/dev/.claude/settings.json 2>/dev/null || true
     echo -e "${GREEN}✓${NC} Claude Code: Global settings loaded"
 else
     echo -e "${YELLOW}!${NC} Claude Code: No global settings (using defaults)"

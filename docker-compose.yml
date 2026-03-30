@@ -67,8 +67,8 @@ services:
       - vol-claude-auth:/home/dev/.claude
       # SECURITY: Docker socket NOT mounted by default
       # To enable DinD, use: docker compose -f docker-compose.yml -f docker-compose.dind.yml up -d
-      # Claude Code user settings (global defaults)
-      - ./config/claude-settings.json:/home/dev/.claude/settings.json:ro
+      # Claude Code user settings (global defaults — symlinked by entrypoint)
+      - ./config/claude-settings.json:/etc/claude-code/settings.json:ro
       # SSH agent forwarding (Mac/Linux)
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
       # Git config (read-only from host)
