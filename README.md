@@ -28,36 +28,140 @@ A fully virtualized, cross-platform development environment running Claude Code 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-## Prerequisites
+## Getting Started
 
-- **Docker Desktop** installed and running
-  - Mac: [Download](https://docs.docker.com/desktop/install/mac-install/) — choose Apple Silicon (M-series) or Intel
-  - Windows: [Download](https://docs.docker.com/desktop/install/windows-install/) — requires WSL2 backend
-- **make** (pre-installed on Mac; Windows: install via `choco install make` or use scripts directly)
+### Step 1 — Install Docker Desktop
 
-To check your Mac chip: `uname -m` → `arm64` = Apple Silicon, `x86_64` = Intel.
+| Platform | Download | Notes |
+|---|---|---|
+| Mac | [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/) | Choose Apple Silicon (M-series) or Intel. Check with `uname -m` |
+| Windows | [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/) | Requires WSL2 backend enabled |
 
-## Quick Start
+After installing, launch Docker Desktop and wait for the whale icon to stop animating. Verify:
 
-### Mac / Linux
+```bash
+docker --version          # Should show a version number
+docker compose version    # Should show a version number
+```
+
+### Step 2 — Configure
 
 ```bash
 cd docker-claude
-cp .env.example .env          # Edit: add your ANTHROPIC_API_KEY
-chmod +x scripts/setup.sh scripts/entrypoint.sh
-make build                    # First build takes ~10-20 min
-make up
-make health                   # Verify all runtimes
-make claude                   # Launch Claude Code
+cp .env.example .env
 ```
 
-### Windows (PowerShell)
+Edit `.env`:
+
+```bash
+# Auth (pick one):
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here   # Option A: API key
+# Or leave empty and run `make login` later     # Option B: OAuth
+
+# Mac/Linux only (run these commands to get the values):
+SSH_AUTH_SOCK=       # paste output of: echo $SSH_AUTH_SOCK
+HOME=                # paste output of: echo $HOME
+
+# Optional — local Claude Code plugin marketplace:
+CLAUDE_MARKETPLACE_PATH=/path/to/your/marketplace
+```
+
+### Step 3 — Build & Start
+
+**Mac / Linux:**
+
+```bash
+chmod +x scripts/setup.sh scripts/entrypoint.sh
+make build            # First build: ~10-20 min (cached after that)
+make up
+```
+
+**Windows (PowerShell):**
 
 ```powershell
-cd docker-claude
-copy .env.example .env        # Edit: add your ANTHROPIC_API_KEY
 .\scripts\setup.ps1
 ```
+
+### Step 4 — Verify
+
+```bash
+make health
+```
+
+Expected output:
+
+```
+=== Runtime Health Check ===
+
+Node.js:  v24.x.x
+npm:      11.x.x
+.NET:     9.x.x
+Go:       go version go1.23.x
+Rust:     rustc 1.x.x
+Docker:   Docker version 2x.x.x
+Git:      git version 2.x.x
+Claude:   2.1.77 (Claude Code)
+
+=== Auth Status ===
+API Key: configured            # or: Auth: NOT CONFIGURED
+
+=== Docker Socket ===
+Socket: not mounted (default for security)
+
+Claude Code: Global settings loaded
+Claude Code: Local marketplace mounted (N plugin(s))
+```
+
+### Step 5 — Authenticate (if using OAuth)
+
+Skip this if you set `ANTHROPIC_API_KEY` in `.env`.
+
+```bash
+make login
+```
+
+Follow the URL shown in the terminal and complete login in your browser.
+
+### Step 6 — Register Marketplace (if using plugins)
+
+Skip this if you don't have a local marketplace.
+
+```bash
+make shell
+claude plugin marketplace add /etc/claude-code/marketplace
+```
+
+### Step 7 — Start Coding
+
+```bash
+# Launch Claude Code directly
+make claude
+
+# Or open a shell, clone a project, then start Claude Code
+make shell
+cd /workspace
+git clone git@github.com:your-org/your-project.git
+cd your-project
+claude
+```
+
+### Quick Reference
+
+| What you want to do | Command |
+|---|---|
+| Start the environment | `make up` |
+| Stop the environment | `make down` |
+| Open a shell | `make shell` |
+| Launch Claude Code | `make claude` |
+| OAuth login | `make login` |
+| Check runtime health | `make health` |
+| Backup your projects | `make backup` |
+| Encrypted backup | `make backup-enc` |
+| Enable Docker-in-Docker | `make DIND=true up` |
+| Enable debugger support | `make DEBUG=true up` |
+| Copy file into container | `docker cp ./file.txt docker-claude:/workspace/` |
+| Copy file out of container | `docker cp docker-claude:/workspace/file.txt ./` |
+| View all commands | `make help` |
 
 ## Makefile Commands
 
