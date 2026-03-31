@@ -691,3 +691,7 @@ docker-claude/
     ├── setup.ps1                     # One-command setup (Windows)
     └── setup.sh                      # One-command setup (Mac/Linux)
 ```
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
