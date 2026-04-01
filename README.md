@@ -64,6 +64,14 @@ Edit `.env`:
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here   # Option A: API key
 # Or leave empty and run `make login` later     # Option B: OAuth
 
+# Optional — proxy or local LLM gateway (leave blank to use api.anthropic.com):
+# ANTHROPIC_BASE_URL=https://your-proxy.example.com
+
+# Optional — pin specific model versions (leave blank for Claude Code defaults):
+# ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5-20251001
+# ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-6
+# ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-6
+
 # Mac/Linux only (run these commands to get the values):
 SSH_AUTH_SOCK=       # paste output of: echo $SSH_AUTH_SOCK
 HOME=                # paste output of: echo $HOME
@@ -71,6 +79,24 @@ HOME=                # paste output of: echo $HOME
 # Optional — local Claude Code plugin marketplace:
 CLAUDE_MARKETPLACE_PATH=/path/to/your/marketplace
 ```
+
+<!-- AUTO-GENERATED: from .env.example — do not edit this section manually -->
+#### Environment Variable Reference
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | No* | API key for headless auth. Leave empty and use `make login` for OAuth. |
+| `ANTHROPIC_BASE_URL` | No | Override the Anthropic API endpoint (e.g. for proxies or local LLM gateways). |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | No | Pin a specific Haiku model version. Leave empty for Claude Code defaults. |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | No | Pin a specific Sonnet model version. Leave empty for Claude Code defaults. |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | No | Pin a specific Opus model version. Leave empty for Claude Code defaults. |
+| `SSH_AUTH_SOCK` | No | SSH agent socket path (Mac/Linux). Run `echo $SSH_AUTH_SOCK` to get value. |
+| `HOME` | No | Host home directory for mounting `.gitconfig` (Mac/Linux). Run `echo $HOME`. |
+| `CLAUDE_MARKETPLACE_PATH` | No | Absolute path to a local Claude Code plugin marketplace folder on your host. |
+| `USERPROFILE` | No | Windows only. Set to `%USERPROFILE%` path (e.g. `C:\Users\YourName`). |
+
+*One of `ANTHROPIC_API_KEY` or OAuth (`make login`) is required to use Claude Code.
+<!-- AUTO-GENERATED END -->
 
 ### Step 3 — Build & Start
 
