@@ -28,36 +28,173 @@ A fully virtualized, cross-platform development environment running Claude Code 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-## Prerequisites
+## Getting Started
 
-- **Docker Desktop** installed and running
-  - Mac: [Download](https://docs.docker.com/desktop/install/mac-install/) — choose Apple Silicon (M-series) or Intel
-  - Windows: [Download](https://docs.docker.com/desktop/install/windows-install/) — requires WSL2 backend
-- **make** (pre-installed on Mac; Windows: install via `choco install make` or use scripts directly)
-
-To check your Mac chip: `uname -m` → `arm64` = Apple Silicon, `x86_64` = Intel.
-
-## Quick Start
-
-### Mac / Linux
+### Step 0 — Get docker-claude
 
 ```bash
+git clone https://github.com/iimmutable/docker-claude.git
 cd docker-claude
-cp .env.example .env          # Edit: add your ANTHROPIC_API_KEY
-chmod +x scripts/setup.sh scripts/entrypoint.sh
-make build                    # First build takes ~10-20 min
-make up
-make health                   # Verify all runtimes
-make claude                   # Launch Claude Code
 ```
 
-### Windows (PowerShell)
+### Step 1 — Install Docker Desktop
+
+| Platform | Download | Notes |
+|---|---|---|
+| Mac | [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/) | Choose Apple Silicon (M-series) or Intel. Check with `uname -m` |
+| Windows | [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/) | Requires WSL2 backend enabled |
+
+After installing, launch Docker Desktop and wait for the whale icon to stop animating. Verify:
+
+```bash
+docker --version          # Should show a version number
+docker compose version    # Should show a version number
+```
+
+### Step 2 — Configure
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```bash
+# Auth (pick one):
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here   # Option A: API key
+# Or leave empty and run `make login` later     # Option B: OAuth
+
+# Optional — proxy or local LLM gateway (leave blank to use api.anthropic.com):
+# ANTHROPIC_BASE_URL=https://your-proxy.example.com
+
+# Optional — pin specific model versions (leave blank for Claude Code defaults):
+# ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5-20251001
+# ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-6
+# ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-6
+
+# Mac/Linux only (run these commands to get the values):
+SSH_AUTH_SOCK=       # paste output of: echo $SSH_AUTH_SOCK
+HOME=                # paste output of: echo $HOME
+
+# Optional — local Claude Code plugin marketplace:
+CLAUDE_MARKETPLACE_PATH=/path/to/your/marketplace
+```
+
+<!-- AUTO-GENERATED: from .env.example — do not edit this section manually -->
+#### Environment Variable Reference
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | No* | API key for headless auth. Leave empty and use `make login` for OAuth. |
+| `ANTHROPIC_BASE_URL` | No | Override the Anthropic API endpoint (e.g. for proxies or local LLM gateways). |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | No | Pin a specific Haiku model version. Leave empty for Claude Code defaults. |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | No | Pin a specific Sonnet model version. Leave empty for Claude Code defaults. |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | No | Pin a specific Opus model version. Leave empty for Claude Code defaults. |
+| `DEV_USER` | No | Username inside the container (default: `dev`). Set to match your host username or any custom name. Requires rebuild. |
+| `SSH_AUTH_SOCK` | No | SSH agent socket path (Mac/Linux). Run `echo $SSH_AUTH_SOCK` to get value. |
+| `HOME` | No | Host home directory for mounting `.gitconfig` (Mac/Linux). Run `echo $HOME`. |
+| `CLAUDE_MARKETPLACE_PATH` | No | Absolute path to a local Claude Code plugin marketplace folder on your host. |
+| `USERPROFILE` | No | Windows only. Set to `%USERPROFILE%` path (e.g. `C:\Users\YourName`). |
+
+*One of `ANTHROPIC_API_KEY` or OAuth (`make login`) is required to use Claude Code.
+<!-- AUTO-GENERATED END -->
+
+### Step 3 — Build & Start
+
+**Mac / Linux:**
+
+```bash
+chmod +x scripts/setup.sh scripts/entrypoint.sh
+make build            # First build: ~10-20 min (cached after that)
+make up
+```
+
+**Windows (PowerShell):**
 
 ```powershell
-cd docker-claude
-copy .env.example .env        # Edit: add your ANTHROPIC_API_KEY
 .\scripts\setup.ps1
 ```
+
+### Step 4 — Verify
+
+```bash
+make health
+```
+
+Expected output:
+
+```
+=== Runtime Health Check ===
+
+Node.js:  v24.x.x
+npm:      11.x.x
+.NET:     9.x.x
+Go:       go version go1.23.x
+Rust:     rustc 1.x.x
+Docker:   Docker version 2x.x.x
+Git:      git version 2.x.x
+Claude:   2.1.77 (Claude Code)
+
+=== Auth Status ===
+API Key: configured            # or: Auth: NOT CONFIGURED
+
+=== Docker Socket ===
+Socket: not mounted (default for security)
+
+Claude Code: Global settings loaded
+Claude Code: Local marketplace mounted (N plugin(s))
+```
+
+### Step 5 — Authenticate (if using OAuth)
+
+Skip this if you set `ANTHROPIC_API_KEY` in `.env`.
+
+```bash
+make login
+```
+
+Follow the URL shown in the terminal and complete login in your browser.
+
+### Step 6 — Register Marketplace (if using plugins)
+
+Skip this if you don't have a local marketplace.
+
+```bash
+make shell
+claude plugin marketplace add /etc/claude-code/marketplace
+```
+
+### Step 7 — Start Coding
+
+```bash
+# Launch Claude Code directly
+make claude
+
+# Or open a shell, clone a project, then start Claude Code
+make shell
+cd /workspace
+git clone git@github.com:your-org/your-project.git
+cd your-project
+claude
+```
+
+### Quick Reference
+
+| What you want to do | Command |
+|---|---|
+| Start the environment | `make up` |
+| Stop the environment | `make down` |
+| Open a shell | `make shell` |
+| Launch Claude Code | `make claude` |
+| OAuth login | `make login` |
+| Check runtime health | `make health` |
+| Backup your projects | `make backup` |
+| Encrypted backup | `make backup-enc` |
+| Enable Docker-in-Docker | `make DIND=true up` |
+| Enable debugger support | `make DEBUG=true up` |
+| Copy file into container | `docker cp ./file.txt docker-claude:/workspace/` |
+| Copy file out of container | `docker cp docker-claude:/workspace/file.txt ./` |
+| View all commands | `make help` |
 
 ## Makefile Commands
 
@@ -98,9 +235,16 @@ make nuke               # ⚠️ Remove EVERYTHING including volumes
 
 # Backup & Restore
 make backup             # Backup project volume to timestamped tar.gz
-make backup-list        # List all available backups
-make restore FILE=...   # Restore from a specific backup
+make backup-enc         # Encrypted backup (AES-256, prompts for passphrase)
+make backup-list        # List all backups (plain + encrypted)
+make restore FILE=...   # Restore from a plain backup
+make restore-enc FILE=... # Restore from an encrypted backup
 make backup-clean       # Delete backups older than 30 days
+
+# Security Overrides
+make DIND=true up       # Enable Docker-in-Docker (mounts Docker socket)
+make DEBUG=true up      # Enable debugger support (SYS_PTRACE + unconfined seccomp)
+make DIND=true DEBUG=true up  # Both
 ```
 
 ## Setup Options
@@ -140,6 +284,91 @@ make login
 ```
 
 OAuth tokens are persisted in the `claude-auth` volume — you only need to login once.
+
+## Claude Code Configuration
+
+Claude Code uses a hierarchical settings system. Docker Claude mounts a global `settings.json` into the container and supports per-project overrides.
+
+### Settings Hierarchy (highest priority wins)
+
+```
+Per-project    /workspace/my-project/.claude/settings.json      (team, checked into git)
+Per-project    /workspace/my-project/.claude/settings.local.json (personal, git-ignored)
+Global         ~/.claude/settings.json                           (mounted from config/)
+```
+
+### Global Settings
+
+Edit `config/claude-settings.json` on your host to change global defaults. This file is mounted read-only into the container and symlinked to `~/.claude/settings.json` at startup. Changes take effect on next container restart.
+
+The default config sets:
+
+- **Model** — defaults to Opus
+- **Environment** — model mappings for Haiku/Sonnet/Opus, API timeout, telemetry disabled
+- **Attribution** — header disabled
+
+### Per-Project Settings
+
+Inside the container, create project-level settings that override globals:
+
+```bash
+make shell
+cd /workspace/my-project
+mkdir -p .claude
+cat > .claude/settings.json << 'EOF'
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
+EOF
+```
+
+An example project settings file is at `config/claude-project-settings.example.json`.
+
+### Personal Project Settings (git-ignored)
+
+For personal tweaks within a project that shouldn't be shared with your team:
+
+```bash
+cat > .claude/settings.local.json << 'EOF'
+{
+  "preferences": {
+    "thinking": "always"
+  }
+}
+EOF
+```
+
+### Local Plugin Marketplace
+
+You can mount a local Claude Code plugin marketplace from your host into the container.
+
+**1. Set the path in `.env`:**
+
+```
+CLAUDE_MARKETPLACE_PATH=/Users/<YOUR_USERNAME>/path/to/your/marketplace
+```
+
+**2. Restart:**
+
+```bash
+make down && make up
+```
+
+**3. Register inside the container:**
+
+```bash
+make shell
+claude plugin marketplace add /etc/claude-code/marketplace
+```
+
+The marketplace is mounted read-only at `/etc/claude-code/marketplace`. File changes on your host are reflected immediately inside the container — no restart needed for updated plugins, though you may need to re-register the marketplace in Claude Code when adding new ones.
+
+If `CLAUDE_MARKETPLACE_PATH` is not set in `.env`, it falls back to the empty `./marketplace/` folder (no error).
 
 ## Port Mappings
 
@@ -362,6 +591,61 @@ crontab -e
 
 > **Note:** Backups work even when containers are stopped — they spin up a temporary container to read the volume. The `backups/` directory is git-ignored by default.
 
+### Encrypted Backups
+
+For sensitive projects, use AES-256-CBC encrypted backups via openssl:
+
+```bash
+# Create encrypted backup (prompts for passphrase)
+make backup-enc
+
+# Restore from encrypted backup (prompts for passphrase)
+make restore-enc FILE=backups/docker-claude-backup_20260330_143000.tar.gz.enc
+```
+
+No GPG setup needed — just remember your passphrase. Losing it means the backup is unrecoverable.
+
+### Automated Daily Encrypted Backups (cron)
+
+```bash
+crontab -e
+
+# Uses BACKUP_PASS env var to avoid interactive prompt
+0 2 * * * cd /path/to/docker-claude && BACKUP_PASS="your-passphrase" make backup-enc 2>&1 >> backups/cron.log
+```
+
+## Security
+
+This environment is security-hardened by default. See [SECURITY.md](SECURITY.md) for full details.
+
+### Defaults
+
+- **Docker socket NOT mounted** — prevents host compromise
+- **Ports bound to 127.0.0.1** — not visible on your local network
+- **Default seccomp profile** — dangerous syscalls blocked
+- **No extra capabilities** — SYS_PTRACE disabled
+- **No piped script execution** — all install scripts downloaded to disk first
+- **All downloads over HTTPS** — from official sources only
+- **Encrypted backups available** — AES-256-CBC via openssl
+
+### Security Overrides
+
+When you need features that reduce security:
+
+```bash
+make DIND=true up                 # Docker-in-Docker (mounts host Docker socket)
+make DEBUG=true up                # Debugger support (SYS_PTRACE + unconfined seccomp)
+make DIND=true DEBUG=true up      # Both
+```
+
+### Accepted Risks
+
+These are known and accepted for development convenience:
+
+- **API keys in env vars** — visible in `docker inspect`; `.env` is git-ignored
+- **SSH agent forwarding** — container can use (but not extract) your SSH keys
+- **Git config mounted** — read-only; exposes name/email
+
 ## Troubleshooting
 
 ### Port conflict on startup (e.g., "port 5000 already in use")
@@ -417,14 +701,24 @@ docker-claude/
 ├── Dockerfile.solana                 # Solana profile (Solana CLI/Anchor)
 ├── Makefile                          # All commands (run: make help)
 ├── README.md                         # This file
+├── SECURITY.md                       # Security documentation
 ├── config/
 │   ├── .bashrc                       # Shell config (prompt, aliases, PATH)
-│   └── .gitattributes                # LF enforcement for cross-platform
+│   ├── .gitattributes                # LF enforcement for cross-platform
+│   ├── claude-settings.json          # Claude Code global settings (mounted into container)
+│   └── claude-project-settings.example.json  # Example per-project settings
+├── docker-compose.debug.yml          # Debug override (SYS_PTRACE + seccomp)
+├── docker-compose.dind.yml           # DinD override (Docker socket mount)
 ├── docker-compose.gpu.yml            # GPU override (NVIDIA device passthrough)
 ├── docker-compose.windows.yml        # Windows-specific overrides
 ├── docker-compose.yml                # Main compose (services, volumes, ports)
+├── marketplace/                      # Default (empty) plugin marketplace fallback
 └── scripts/
     ├── entrypoint.sh                 # Container startup (runtime init, auth check)
     ├── setup.ps1                     # One-command setup (Windows)
     └── setup.sh                      # One-command setup (Mac/Linux)
 ```
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.

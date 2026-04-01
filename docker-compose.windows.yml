@@ -3,8 +3,9 @@
 #
 # Usage: docker compose -f docker-compose.yml -f docker-compose.windows.yml up -d
 #
-# This overrides Mac/Linux-specific volume mounts (Docker socket, SSH agent)
-# with their Windows equivalents.
+# Overrides SSH forwarding (uses mounted keys instead of agent socket).
+# Docker socket is NOT mounted by default (security hardened).
+# To enable DinD on Windows, also add docker-compose.dind.yml.
 # =============================================================================
 
 services:
@@ -12,10 +13,8 @@ services:
     volumes:
       - vol-projects:/workspace
       - vol-claude-auth:/home/dev/.claude
-      # Windows: Docker Desktop exposes the socket via named pipe
-      - //var/run/docker.sock:/var/run/docker.sock
+      # SECURITY: Docker socket NOT mounted by default
       # Windows: SSH keys mounted directly (no agent forwarding)
-      # Uses the Windows user's .ssh directory via WSL path translation
       - ${USERPROFILE:-.}/.ssh:/home/dev/.ssh:ro
       - ${USERPROFILE:-.}/.gitconfig:/home/dev/.gitconfig:ro
     environment:
@@ -29,12 +28,10 @@ services:
     volumes:
       - vol-projects:/workspace
       - vol-claude-auth:/home/dev/.claude
-      - //var/run/docker.sock:/var/run/docker.sock
       - ${USERPROFILE:-.}/.ssh:/home/dev/.ssh:ro
 
   docker-claude-mobile:
     volumes:
       - vol-projects:/workspace
       - vol-claude-auth:/home/dev/.claude
-      - //var/run/docker.sock:/var/run/docker.sock
       - ${USERPROFILE:-.}/.ssh:/home/dev/.ssh:ro

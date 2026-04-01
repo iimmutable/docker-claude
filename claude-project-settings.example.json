@@ -1,0 +1,21 @@
+{
+  "$schema": "https://code.claude.com/settings.schema.json",
+
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run:*)",
+      "Bash(npx jest:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf node_modules)"
+    ]
+  },
+
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

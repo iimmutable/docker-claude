@@ -1,11 +1,20 @@
 # =============================================================================
-# Docker Compose — Claude Code Development Environment
+# Docker Compose — Docker Claude Development Environment (Security Hardened)
+#
+# SECURITY NOTES:
+#   - Docker socket is NOT mounted by default (prevents host compromise)
+#   - Ports bound to 127.0.0.1 only (not exposed to local network)
+#   - Default Docker seccomp profile (not unconfined)
+#   - No extra capabilities by default (SYS_PTRACE available via debug override)
+#   - To enable DinD: use docker-compose.dind.yml override
+#   - To enable debugging: use docker-compose.debug.yml override
 #
 # Usage:
 #   Core only:       docker compose up -d
+#   With DinD:       docker compose -f docker-compose.yml -f docker-compose.dind.yml up -d
+#   With Debug:      docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
 #   With Solana:     docker compose --profile solana up -d
 #   With Mobile:     docker compose --profile mobile up -d
-#   Everything:      docker compose --profile solana --profile mobile up -d
 #   Slim build:      docker compose build --build-arg INCLUDE_DOTNET=false
 #   GPU build:       docker compose build --build-arg INCLUDE_GPU=true
 # =============================================================================
@@ -26,6 +35,7 @@ services:
         INCLUDE_GPU: "false"
         DEV_UID: "1000"
         DEV_GID: "1000"
+        DEV_USER: "${DEV_USER:-dev}"
     image: docker-claude:latest
     container_name: docker-claude
     hostname: docker-claude
@@ -36,12 +46,17 @@ services:
     # -- Environment --
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - ANTHROPIC_DEFAULT_HAIKU_MODEL=${ANTHROPIC_DEFAULT_HAIKU_MODEL:-}
+      - ANTHROPIC_DEFAULT_SONNET_MODEL=${ANTHROPIC_DEFAULT_SONNET_MODEL:-}
+      - ANTHROPIC_DEFAULT_OPUS_MODEL=${ANTHROPIC_DEFAULT_OPUS_MODEL:-}
       - TERM=xterm-256color
       - COLORTERM=truecolor
+      - DEV_USER=${DEV_USER:-dev}
       # NVM
       - NVM_DIR=/usr/local/nvm
       # Go
-      - GOPATH=/home/dev/go
+      - GOPATH=/home/${DEV_USER:-dev}/go
       - GOROOT=/usr/local/go
       # .NET
       - DOTNET_ROOT=/usr/local/dotnet
@@ -55,26 +70,30 @@ services:
       # Project code + dependencies (named volume, fully virtualized)
       - vol-projects:/workspace
       # Claude auth persistence
-      - vol-claude-auth:/home/dev/.claude
-      # Docker socket for DinD
-      - /var/run/docker.sock:/var/run/docker.sock
+      - vol-claude-auth:/home/${DEV_USER:-dev}/.claude
+      # SECURITY: Docker socket NOT mounted by default
+      # To enable DinD, use: docker compose -f docker-compose.yml -f docker-compose.dind.yml up -d
+      # Claude Code user settings (global defaults — symlinked by entrypoint)
+      - ./config/claude-settings.json:/etc/claude-code/settings.json:ro
+      # Claude Code local marketplace (host folder, read-only)
+      - ${CLAUDE_MARKETPLACE_PATH:-./marketplace}:/etc/claude-code/marketplace:ro
       # SSH agent forwarding (Mac/Linux)
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
       # Git config (read-only from host)
-      - ${HOME:-~}/.gitconfig:/home/dev/.gitconfig:ro
+      - ${HOME:-~}/.gitconfig:/home/${DEV_USER:-dev}/.gitconfig:ro
 
     # -- SSH agent --
     env_file:
       - .env
 
-    # -- Ports --
+    # -- Ports (bound to localhost only) --
     ports:
-      - "41300:3000"     # React / Express
-      - "41500:5000"     # ASP.NET HTTP
-      - "41501:5001"     # ASP.NET HTTPS
-      - "41517:5173"     # Vite
-      - "41808:8080"     # Go / Generic
-      - "41881:8081"     # Vue / Metro
+      - "127.0.0.1:41300:3000"     # React / Express
+      - "127.0.0.1:41500:5000"     # ASP.NET HTTP
+      - "127.0.0.1:41501:5001"     # ASP.NET HTTPS
+      - "127.0.0.1:41517:5173"     # Vite
+      - "127.0.0.1:41808:8080"     # Go / Generic
+      - "127.0.0.1:41881:8081"     # Vue / Metro
 
     # -- Resource limits --
     deploy:
@@ -87,10 +106,9 @@ services:
           cpus: "1"
 
     # -- Security --
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_PTRACE  # For debuggers
+    # SECURITY: Using Docker default seccomp profile (not unconfined)
+    # SECURITY: No extra capabilities by default
+    # To enable SYS_PTRACE for debuggers, use docker-compose.debug.yml override
 
   # ===========================================================================
   # Solana Development (optional profile)
@@ -112,18 +130,22 @@ services:
 
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - ANTHROPIC_DEFAULT_HAIKU_MODEL=${ANTHROPIC_DEFAULT_HAIKU_MODEL:-}
+      - ANTHROPIC_DEFAULT_SONNET_MODEL=${ANTHROPIC_DEFAULT_SONNET_MODEL:-}
+      - ANTHROPIC_DEFAULT_OPUS_MODEL=${ANTHROPIC_DEFAULT_OPUS_MODEL:-}
       - TERM=xterm-256color
       - NVM_DIR=/usr/local/nvm
 
     volumes:
       - vol-projects:/workspace
-      - vol-claude-auth:/home/dev/.claude
-      - /var/run/docker.sock:/var/run/docker.sock
+      - vol-claude-auth:/home/${DEV_USER:-dev}/.claude
+      # SECURITY: Docker socket NOT mounted by default
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
 
     ports:
-      - "41889:8899"     # Solana local validator RPC
-      - "41890:8900"     # Solana local validator WebSocket
+      - "127.0.0.1:41889:8899"     # Solana local validator RPC
+      - "127.0.0.1:41890:8900"     # Solana local validator WebSocket
 
     deploy:
       resources:
@@ -151,6 +173,10 @@ services:
 
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - ANTHROPIC_DEFAULT_HAIKU_MODEL=${ANTHROPIC_DEFAULT_HAIKU_MODEL:-}
+      - ANTHROPIC_DEFAULT_SONNET_MODEL=${ANTHROPIC_DEFAULT_SONNET_MODEL:-}
+      - ANTHROPIC_DEFAULT_OPUS_MODEL=${ANTHROPIC_DEFAULT_OPUS_MODEL:-}
       - TERM=xterm-256color
       - NVM_DIR=/usr/local/nvm
       - ANDROID_HOME=/opt/android-sdk
@@ -160,15 +186,15 @@ services:
 
     volumes:
       - vol-projects:/workspace
-      - vol-claude-auth:/home/dev/.claude
-      - /var/run/docker.sock:/var/run/docker.sock
+      - vol-claude-auth:/home/${DEV_USER:-dev}/.claude
+      # SECURITY: Docker socket NOT mounted by default
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
 
     ports:
-      - "41900:19000"   # Expo
-      - "41901:19001"   # Expo DevTools
-      - "41554:5554"     # Android emulator
-      - "41555:5555"     # Android ADB
+      - "127.0.0.1:41900:19000"   # Expo
+      - "127.0.0.1:41901:19001"   # Expo DevTools
+      - "127.0.0.1:41554:5554"     # Android emulator
+      - "127.0.0.1:41555:5555"     # Android ADB
 
     deploy:
       resources:

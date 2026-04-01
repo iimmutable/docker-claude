@@ -32,8 +32,8 @@ fi
 
 # -- Go --
 if [ -d "/usr/local/go" ]; then
-    export PATH="/usr/local/go/bin:/home/dev/go/bin:$PATH"
-    export GOPATH="/home/dev/go"
+    export PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
+    export GOPATH="$HOME/go"
     mkdir -p "$GOPATH"
     echo -e "${GREEN}✓${NC} Go $(go version 2>/dev/null | awk '{print $3}' || echo 'installed')"
 fi
@@ -45,8 +45,8 @@ if [ -d "/usr/local/cargo" ]; then
 fi
 
 # -- Solana (if available) --
-if [ -d "/home/dev/.local/share/solana/install/active_release" ]; then
-    export PATH="/home/dev/.local/share/solana/install/active_release/bin:$PATH"
+if [ -d "$HOME/.local/share/solana/install/active_release" ]; then
+    export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
     echo -e "${GREEN}✓${NC} Solana $(solana --version 2>/dev/null | awk '{print $2}' || echo 'installed')"
 fi
 
@@ -60,10 +60,10 @@ fi
 if [ -S "/ssh-agent" ]; then
     export SSH_AUTH_SOCK=/ssh-agent
     echo -e "${GREEN}✓${NC} SSH agent forwarded"
-elif [ -d "/home/dev/.ssh" ] && [ "$(ls -A /home/dev/.ssh 2>/dev/null)" ]; then
+elif [ -d "$HOME/.ssh" ] && [ "$(ls -A "$HOME/.ssh" 2>/dev/null)" ]; then
     # Windows mode: keys mounted directly, start a local agent
     eval "$(ssh-agent -s)" > /dev/null 2>&1
-    for key in /home/dev/.ssh/id_*; do
+    for key in "$HOME"/.ssh/id_*; do
         [ -f "$key" ] && [[ "$key" != *.pub ]] && ssh-add "$key" 2>/dev/null || true
     done
     echo -e "${GREEN}✓${NC} SSH keys loaded from mounted directory"
@@ -81,7 +81,7 @@ fi
 # -- Claude Code Auth --
 if [ -n "$ANTHROPIC_API_KEY" ]; then
     echo -e "${GREEN}✓${NC} Claude Code: API key configured"
-elif [ -f "/home/dev/.claude/credentials.json" ] || [ -f "/home/dev/.claude/.credentials.json" ]; then
+elif [ -f "$HOME/.claude/credentials.json" ] || [ -f "$HOME/.claude/.credentials.json" ]; then
     echo -e "${GREEN}✓${NC} Claude Code: OAuth session found"
 else
     echo -e "${YELLOW}!${NC} Claude Code: No auth configured"
