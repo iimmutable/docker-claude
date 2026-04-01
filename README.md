@@ -349,7 +349,7 @@ You can mount a local Claude Code plugin marketplace from your host into the con
 **1. Set the path in `.env`:**
 
 ```
-CLAUDE_MARKETPLACE_PATH=/Users/yourname/path/to/your/marketplace
+CLAUDE_MARKETPLACE_PATH=/Users/<YOUR_USERNAME>/path/to/your/marketplace
 ```
 
 **2. Restart:**
