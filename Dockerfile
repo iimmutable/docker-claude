@@ -24,6 +24,7 @@ ARG INCLUDE_GPU=false
 ARG GO_VERSION=1.23.4
 ARG DEV_UID=1000
 ARG DEV_GID=1000
+ARG DEV_USER=dev
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
@@ -117,7 +118,7 @@ RUN if [ "${INCLUDE_DOTNET}" = "true" ]; then \
 # compare against checksums listed at https://go.dev/dl/
 # =============================================================================
 ENV GOROOT=/usr/local/go
-ENV GOPATH=/home/dev/go
+ENV GOPATH=/home/${DEV_USER}/go
 RUN if [ "${INCLUDE_GOLANG}" = "true" ]; then \
       ARCH="$(dpkg --print-architecture)" \
       && GO_TAR="go${GO_VERSION}.linux-${ARCH}.tar.gz" \
@@ -166,32 +167,32 @@ RUN if [ -s "$NVM_DIR/nvm.sh" ]; then \
 # Create non-root dev user
 # =============================================================================
 RUN existing_user=$(getent passwd ${DEV_UID} | cut -d: -f1) \
-    && if [ -n "$existing_user" ] && [ "$existing_user" != "dev" ]; then \
+    && if [ -n "$existing_user" ] && [ "$existing_user" != "${DEV_USER}" ]; then \
          userdel -r "$existing_user" 2>/dev/null || true; \
        fi \
     && existing_group=$(getent group ${DEV_GID} | cut -d: -f1) \
-    && if [ -n "$existing_group" ] && [ "$existing_group" != "dev" ]; then \
+    && if [ -n "$existing_group" ] && [ "$existing_group" != "${DEV_USER}" ]; then \
          groupdel "$existing_group" 2>/dev/null || true; \
        fi \
-    && groupadd -f -g ${DEV_GID} dev \
-    && useradd -m -u ${DEV_UID} -g dev -s /bin/bash dev \
-    && (groupadd -f docker 2>/dev/null; usermod -aG docker dev 2>/dev/null; true) \
-    && mkdir -p /workspace /home/dev/.claude /home/dev/.ssh /home/dev/go \
-    && chown -R dev:dev /workspace /home/dev
+    && groupadd -f -g ${DEV_GID} ${DEV_USER} \
+    && useradd -m -u ${DEV_UID} -g ${DEV_USER} -s /bin/bash ${DEV_USER} \
+    && (groupadd -f docker 2>/dev/null; usermod -aG docker ${DEV_USER} 2>/dev/null; true) \
+    && mkdir -p /workspace /home/${DEV_USER}/.claude /home/${DEV_USER}/.ssh /home/${DEV_USER}/go \
+    && chown -R ${DEV_USER}:${DEV_USER} /workspace /home/${DEV_USER}
 
 # =============================================================================
 # Configure PATH
 # =============================================================================
-ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/home/dev/go/bin:/usr/local/dotnet:$PATH
+ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/home/${DEV_USER}/go/bin:/usr/local/dotnet:$PATH
 
 # =============================================================================
 # Config files
 # =============================================================================
-COPY config/.bashrc /home/dev/.bashrc
+COPY config/.bashrc /home/${DEV_USER}/.bashrc
 COPY config/.gitattributes /workspace/.gitattributes
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh \
-    && chown dev:dev /home/dev/.bashrc \
+    && chown ${DEV_USER}:${DEV_USER} /home/${DEV_USER}/.bashrc \
     && dos2unix /usr/local/bin/entrypoint.sh 2>/dev/null \
     || (sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod 755 /usr/local/bin/entrypoint.sh)
 
@@ -204,6 +205,6 @@ WORKDIR /workspace
 # Node/Vite/React: 3000, 5173 | ASP.NET: 5000, 5001 | Go/Generic: 8080 | Vue: 8081
 EXPOSE 3000 5000 5001 5173 8080 8081
 
-USER dev
+USER ${DEV_USER}
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

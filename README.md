@@ -90,6 +90,7 @@ CLAUDE_MARKETPLACE_PATH=/path/to/your/marketplace
 | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | No | Pin a specific Haiku model version. Leave empty for Claude Code defaults. |
 | `ANTHROPIC_DEFAULT_SONNET_MODEL` | No | Pin a specific Sonnet model version. Leave empty for Claude Code defaults. |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | No | Pin a specific Opus model version. Leave empty for Claude Code defaults. |
+| `DEV_USER` | No | Username inside the container (default: `dev`). Set to match your host username or any custom name. Requires rebuild. |
 | `SSH_AUTH_SOCK` | No | SSH agent socket path (Mac/Linux). Run `echo $SSH_AUTH_SOCK` to get value. |
 | `HOME` | No | Host home directory for mounting `.gitconfig` (Mac/Linux). Run `echo $HOME`. |
 | `CLAUDE_MARKETPLACE_PATH` | No | Absolute path to a local Claude Code plugin marketplace folder on your host. |

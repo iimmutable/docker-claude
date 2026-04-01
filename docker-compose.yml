@@ -35,6 +35,7 @@ services:
         INCLUDE_GPU: "false"
         DEV_UID: "1000"
         DEV_GID: "1000"
+        DEV_USER: "${DEV_USER:-dev}"
     image: docker-claude:latest
     container_name: docker-claude
     hostname: docker-claude
@@ -51,10 +52,11 @@ services:
       - ANTHROPIC_DEFAULT_OPUS_MODEL=${ANTHROPIC_DEFAULT_OPUS_MODEL:-}
       - TERM=xterm-256color
       - COLORTERM=truecolor
+      - DEV_USER=${DEV_USER:-dev}
       # NVM
       - NVM_DIR=/usr/local/nvm
       # Go
-      - GOPATH=/home/dev/go
+      - GOPATH=/home/${DEV_USER:-dev}/go
       - GOROOT=/usr/local/go
       # .NET
       - DOTNET_ROOT=/usr/local/dotnet
@@ -68,7 +70,7 @@ services:
       # Project code + dependencies (named volume, fully virtualized)
       - vol-projects:/workspace
       # Claude auth persistence
-      - vol-claude-auth:/home/dev/.claude
+      - vol-claude-auth:/home/${DEV_USER:-dev}/.claude
       # SECURITY: Docker socket NOT mounted by default
       # To enable DinD, use: docker compose -f docker-compose.yml -f docker-compose.dind.yml up -d
       # Claude Code user settings (global defaults — symlinked by entrypoint)
@@ -78,7 +80,7 @@ services:
       # SSH agent forwarding (Mac/Linux)
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
       # Git config (read-only from host)
-      - ${HOME:-~}/.gitconfig:/home/dev/.gitconfig:ro
+      - ${HOME:-~}/.gitconfig:/home/${DEV_USER:-dev}/.gitconfig:ro
 
     # -- SSH agent --
     env_file:
@@ -137,7 +139,7 @@ services:
 
     volumes:
       - vol-projects:/workspace
-      - vol-claude-auth:/home/dev/.claude
+      - vol-claude-auth:/home/${DEV_USER:-dev}/.claude
       # SECURITY: Docker socket NOT mounted by default
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
 
@@ -184,7 +186,7 @@ services:
 
     volumes:
       - vol-projects:/workspace
-      - vol-claude-auth:/home/dev/.claude
+      - vol-claude-auth:/home/${DEV_USER:-dev}/.claude
       # SECURITY: Docker socket NOT mounted by default
       - ${SSH_AUTH_SOCK:-/dev/null}:/ssh-agent
 
