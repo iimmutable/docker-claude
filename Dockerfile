@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential pkg-config cmake \
     unzip zip tar gzip bzip2 xz-utils \
     zsh bash-completion jq ripgrep fd-find fzf tree htop \
+    ffmpeg p7zip-full poppler-utils zoxide \
     vim nano \
     net-tools iputils-ping dnsutils \
     locales \
@@ -164,6 +165,51 @@ RUN if [ -s "$NVM_DIR/nvm.sh" ]; then \
     fi
 
 # =============================================================================
+# Terminal Tools: Yazi, Lazygit, Starship
+# =============================================================================
+ARG YAZI_VERSION=26.1.22
+ARG LAZYGIT_VERSION=0.60.0
+ARG STARSHIP_VERSION=1.24.2
+
+# -- Yazi (file manager) --
+# Architecture mapping: amd64 → x86_64-unknown-linux-gnu, arm64 → aarch64-unknown-linux-gnu
+RUN ARCH="$(dpkg --print-architecture)" \
+    && YAZI_TARGET="x86_64-unknown-linux-gnu" \
+    && if [ "$ARCH" = "arm64" ]; then YAZI_TARGET="aarch64-unknown-linux-gnu"; fi \
+    && curl -fsSL "https://github.com/sxyazi/yazi/releases/download/v${YAZI_VERSION}/yazi-${YAZI_TARGET}.zip" \
+       -o /tmp/yazi.zip \
+    && unzip /tmp/yazi.zip -d /tmp/yazi-extract \
+    && mv /tmp/yazi-extract/yazi-${YAZI_TARGET}/yazi /usr/local/bin/yazi \
+    && mv /tmp/yazi-extract/yazi-${YAZI_TARGET}/ya /usr/local/bin/ya \
+    && rm -rf /tmp/yazi.zip /tmp/yazi-extract \
+    && echo ">>> Yazi v${YAZI_VERSION} installed"
+
+# -- Lazygit (git TUI) --
+# Architecture mapping: amd64 → x86_64, arm64 → arm64
+RUN ARCH="$(dpkg --print-architecture)" \
+    && LAZY_ARCH="x86_64" \
+    && if [ "$ARCH" = "arm64" ]; then LAZY_ARCH="arm64"; fi \
+    && LAZYGIT_TAR="lazygit_${LAZYGIT_VERSION}_linux_${LAZY_ARCH}.tar.gz" \
+    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/${LAZYGIT_TAR}" \
+       -o /tmp/lazygit.tar.gz \
+    && tar -xzf /tmp/lazygit.tar.gz -C /tmp \
+    && mv /tmp/lazygit /usr/local/bin/lazygit \
+    && rm /tmp/lazygit.tar.gz \
+    && echo ">>> Lazygit v${LAZYGIT_VERSION} installed"
+
+# -- Starship (prompt) --
+# Architecture mapping: amd64 → x86_64-unknown-linux-musl, arm64 → aarch64-unknown-linux-musl
+RUN ARCH="$(dpkg --print-architecture)" \
+    && STARSHIP_TARGET="x86_64-unknown-linux-musl" \
+    && if [ "$ARCH" = "arm64" ]; then STARSHIP_TARGET="aarch64-unknown-linux-musl"; fi \
+    && curl -fsSL "https://github.com/starship/starship/releases/download/v${STARSHIP_VERSION}/starship-${STARSHIP_TARGET}.tar.gz" \
+       -o /tmp/starship.tar.gz \
+    && tar -xzf /tmp/starship.tar.gz -C /tmp \
+    && mv /tmp/starship /usr/local/bin/starship \
+    && rm /tmp/starship.tar.gz \
+    && echo ">>> Starship v${STARSHIP_VERSION} installed"
+
+# =============================================================================
 # Create non-root dev user
 # =============================================================================
 RUN existing_user=$(getent passwd ${DEV_UID} | cut -d: -f1) \
@@ -189,10 +235,12 @@ ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/home/${DEV_USER}/go/bin:/usr/lo
 # Config files
 # =============================================================================
 COPY config/.bashrc /home/${DEV_USER}/.bashrc
+COPY config/starship.toml /home/${DEV_USER}/.config/starship.toml
 COPY config/.gitattributes /workspace/.gitattributes
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh \
     && chown ${DEV_USER}:${DEV_USER} /home/${DEV_USER}/.bashrc \
+    && chown ${DEV_USER}:${DEV_USER} /home/${DEV_USER}/.config/starship.toml \
     && dos2unix /usr/local/bin/entrypoint.sh 2>/dev/null \
     || (sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod 755 /usr/local/bin/entrypoint.sh)
 
