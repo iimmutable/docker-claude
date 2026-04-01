@@ -44,6 +44,21 @@ if [ -d "/usr/local/cargo" ]; then
     echo -e "${GREEN}✓${NC} Rust $(rustc --version 2>/dev/null | awk '{print $2}' || echo 'installed')"
 fi
 
+# -- Starship --
+if command -v starship &> /dev/null; then
+    echo -e "${GREEN}✓${NC} Starship prompt (Catppuccin Powerline)"
+fi
+
+# -- Yazi --
+if command -v yazi &> /dev/null; then
+    echo -e "${GREEN}✓${NC} Yazi $(yazi --version 2>/dev/null | head -1 | awk '{print $2}' || echo 'installed')"
+fi
+
+# -- Lazygit --
+if command -v lazygit &> /dev/null; then
+    echo -e "${GREEN}✓${NC} Lazygit $(lazygit --version 2>/dev/null || echo 'installed')"
+fi
+
 # -- Solana (if available) --
 if [ -d "/home/dev/.local/share/solana/install/active_release" ]; then
     export PATH="/home/dev/.local/share/solana/install/active_release/bin:$PATH"

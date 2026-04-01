@@ -45,17 +45,18 @@ if [ -S "/ssh-agent" ]; then
     export SSH_AUTH_SOCK=/ssh-agent
 fi
 
-# -- Prompt --
-parse_git_branch() {
-    git branch 2>/dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
-}
-
-PS1='\[\033[01;34m\]claude-dev\[\033[00m\]:\[\033[01;32m\]\w\[\033[33m\]$(parse_git_branch)\[\033[00m\]\$ '
+# -- Starship Prompt --
+if command -v starship &> /dev/null; then
+    export STARSHIP_CONFIG=/home/dev/.config/starship.toml
+    eval "$(starship init bash)"
+fi
 
 # -- Aliases --
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
+alias y='yazi'
+alias lg='lazygit'
 alias gs='git status'
 alias gc='git commit'
 alias gp='git push'
