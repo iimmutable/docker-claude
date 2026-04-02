@@ -49,6 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev libncursesw5-dev libxml2-dev libxmlsec1-dev \
     libffi-dev liblzma-dev \
     supervisor \
+    gosu \
     && locale-gen en_US.UTF-8 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -253,6 +254,8 @@ WORKDIR /workspace
 # Node/Vite/React: 3000, 5173 | ASP.NET: 5000, 5001 | Go/Generic: 8080 | Vue: 8081
 EXPOSE 3000 5000 5001 5173 8080 8081
 
-USER ${DEV_USER}
+# NOTE: Container starts as root to fix ownership of host-copied files,
+# then entrypoint drops privileges to dev user before executing commands.
+# This follows the standard Docker pattern used by nginx, postgres, etc.
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

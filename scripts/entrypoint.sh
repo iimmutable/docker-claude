@@ -1,7 +1,11 @@
 #!/bin/bash
 # =============================================================================
 # Container Entrypoint — Claude Code Dev Environment
-# Handles: NVM init, SSH agent, Claude auth, Docker group, runtime checks
+# Handles: Permission fix, NVM init, SSH agent, Claude auth, runtime checks
+#
+# This script runs twice:
+#   1st pass: As root (UID 0) — fixes permissions, then drops to dev
+#   2nd pass: As dev (UID 1000) — continues normal startup
 # =============================================================================
 
 set -e
@@ -13,6 +17,46 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# =============================================================================
+# ROOT MODE: Fix permissions then drop to dev
+# =============================================================================
+if [ "$(id -u)" = "0" ]; then
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}  Docker Claude — Initializing (as root)${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+    # Fix files copied from host (common macOS UIDs: 501, 502)
+    echo -e "${YELLOW}!${NC} Fixing file ownership for host-copied files..."
+    find /workspace -type f -o -type d 2>/dev/null | while read item; do
+        uid=$(stat -c "%u" "$item" 2>/dev/null || echo "")
+        # Fix files owned by common host UIDs (501, 502) or with no owner
+        if [ "$uid" = "501" ] || [ "$uid" = "502" ] || [ "$uid" = "" ]; then
+            chown -h dev:dev "$item" 2>/dev/null || true
+        fi
+    done
+
+    # Also fix orphaned files (nouser)
+    find /workspace -nouser 2>/dev/null -exec chown -h dev:dev {} \; || true
+
+    # Fix home directory if needed
+    find /home/dev -type f -o -type d 2>/dev/null | while read item; do
+        uid=$(stat -c "%u" "$item" 2>/dev/null || echo "")
+        if [ "$uid" = "501" ] || [ "$uid" = "502" ] || [ "$uid" = "" ]; then
+            chown -h dev:dev "$item" 2>/dev/null || true
+        fi
+    done
+    find /home/dev -nouser 2>/dev/null -exec chown -h dev:dev {} \; || true
+
+    echo -e "${GREEN}✓${NC} Ownership fixed"
+
+    # Drop privileges and re-execute as dev user
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    exec gosu dev "$0" "$@"
+fi
+
+# =============================================================================
+# DEV USER MODE: Normal startup (runs as UID 1000)
+# =============================================================================
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}  Claude Code Development Environment${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
