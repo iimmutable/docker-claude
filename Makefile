@@ -116,7 +116,7 @@ all-up: ## Start everything
 # =============================================================================
 
 shell: ## Open bash shell in docker-claude
-	$(COMPOSE) exec docker-claude bash
+	$(COMPOSE) exec -u dev docker-claude bash
 
 claude: ## Launch Claude Code CLI
 	$(COMPOSE) exec docker-claude bash -c '. /usr/local/nvm/nvm.sh && claude'
@@ -125,10 +125,10 @@ login: ## Run Claude OAuth login
 	$(COMPOSE) exec docker-claude bash -c '. /usr/local/nvm/nvm.sh && claude login'
 
 shell-solana: ## Open shell in Solana container
-	$(COMPOSE) --profile solana exec docker-claude-solana bash
+	$(COMPOSE) --profile solana exec -u dev docker-claude-solana bash
 
 shell-mobile: ## Open shell in Mobile container
-	$(COMPOSE) --profile mobile exec docker-claude-mobile bash
+	$(COMPOSE) --profile mobile exec -u dev docker-claude-mobile bash
 
 # =============================================================================
 # Status & Logs
